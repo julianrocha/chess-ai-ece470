@@ -1,5 +1,6 @@
 import chess
 import chess.svg
+import chess.engine
 import time
 import math
 import random
@@ -10,13 +11,17 @@ piece_values = {chess.KING : 200, chess.QUEEN: 9, chess.ROOK: 5, chess.BISHOP: 3
 def evaluate_material(board, colour):
 	material = 0
 	for piece_type in range(chess.PAWN, chess.KING + 1):
-		material += piece_values[piece_type] * len(board.pieces(piece_type, colour))
-		material -= piece_values[piece_type] * len(board.pieces(piece_type, not colour))
+		material += piece_values[piece_type] * (len(board.pieces(piece_type, colour)) - len(board.pieces(piece_type, not colour)))
 	return material
 
 def evaluate_board(board, colour):
 	material = evaluate_material(board, colour)
-	# add other evaluations here
+	# add other evaluations here, examples:
+	# deduct for having blocked, doubled, or isolated pawns
+	# compare 'mobility' of both sides_
+	# add for bishop pair
+	# opening book
+	# modofied endgame evaluations
 	return material
 
 # http://web.cs.ucla.edu/~rosen/161/notes/alphabeta.html
@@ -28,6 +33,10 @@ def find_best_move_AB(board, colour, depth, alpha = -math.inf, beta = math.inf, 
 	best_move = None
 	moves = list(board.legal_moves)
 	random.shuffle(moves) # so engine doesn't play the same moves
+	# gives_check(move: Move) Probes if the given move would put the opponent in check. The move must be at least pseudo-legal.
+	moves.sort(key=lambda move: board.is_capture(move), reverse=True) # pruning is more effective if capture moves are looked at first
+
+
 	if len(moves) > 0:
 		best_move = moves[0] # board.push(None) causes error
 
@@ -58,7 +67,10 @@ def find_best_move_AB(board, colour, depth, alpha = -math.inf, beta = math.inf, 
 	return [best_move_value, best_move]
 
 def play_chess():
-	board = chess.Board() # chess.svg.board(board=board)
+	board = chess.Board()
+	stockfish = chess.engine.SimpleEngine.popen_uci("/Users/julianrocha/code/stockfish-11-mac/src/stockfish")
+	stockfish.configure({"Skill Level" : 1})
+
 	print("Starting chess game...",end="\n")
 	while not board.is_game_over():
 		print(board)
@@ -66,13 +78,22 @@ def play_chess():
 			print("Best move for white is: ",end="")
 		else:
 			print("Best move for black is: ",end="")
-		value, move = find_best_move_AB(board, board.turn, 4)
+		value, move = find_best_move_AB(board, board.turn, 5)
 		print(move)
 		print(value)
 		print()
 
 		board.push(move)
-	
+
+		# stockfish turn as black
+		print(board)
+		result = stockfish.play(board, chess.engine.Limit(time=0.1))
+		# TODO: if stockfish returns None move then script crashes, add checks for this
+		print("Stockfish will reply with: " + str(result.move))
+		print()
+		board.push(result.move)
+
+	stockfish.quit()
 	print("Result for White-Black is: " + board.result())
 	if board.is_checkmate():
 		print("checkmate!")
