@@ -6,7 +6,8 @@ import math
 import random
 
 
-piece_values = {chess.KING : 200, chess.QUEEN: 9, chess.ROOK: 5, chess.BISHOP: 3, chess.KNIGHT: 3, chess.PAWN: 1} # https://en.wikipedia.org/wiki/Chess_piece_relative_value
+piece_values = {chess.KING : 20000, chess.QUEEN: 900, chess.ROOK: 500, chess.BISHOP: 330, chess.KNIGHT: 320, chess.PAWN: 100}
+# https://www.chessprogramming.org/Simplified_Evaluation_Function
 
 def evaluate_material(board, colour):
 	material = 0
@@ -78,7 +79,7 @@ def play_chess():
 			print("Best move for white is: ",end="")
 		else:
 			print("Best move for black is: ",end="")
-		value, move = find_best_move_AB(board, board.turn, 5)
+		value, move = find_best_move_AB(board, board.turn, 4)
 		print(move)
 		print(value)
 		print()
@@ -88,7 +89,8 @@ def play_chess():
 		# stockfish turn as black
 		print(board)
 		result = stockfish.play(board, chess.engine.Limit(time=0.1))
-		# TODO: if stockfish returns None move then script crashes, add checks for this
+		if result is None:
+			break
 		print("Stockfish will reply with: " + str(result.move))
 		print()
 		board.push(result.move)
