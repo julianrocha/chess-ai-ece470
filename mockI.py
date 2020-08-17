@@ -89,7 +89,7 @@ def play_chess():
 		# stockfish turn as black
 		print(board)
 		result = stockfish.play(board, chess.engine.Limit(time=0.1))
-		if result is None:
+		if result.move is None:
 			break
 		print("Stockfish will reply with: " + str(result.move))
 		print()
