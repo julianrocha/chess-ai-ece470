@@ -18,7 +18,7 @@ template_square_table = {
 }
 """
 
-# corresponds to values for white pieces, mirror square vertically for black value
+# Corresponds to values for white pieces, mirror square vertically for black value
 piece_square_table = {
 	chess.PAWN: {
 		chess.A8: 0, chess.B8: 0, chess.C8: 0, chess.D8: 0, chess.E8: 0, chess.F8: 0, chess.G8: 0, chess.H8: 0,
@@ -75,7 +75,9 @@ piece_square_table = {
 piece_values = {chess.KING : 20000, chess.QUEEN: 900, chess.ROOK: 500, chess.BISHOP: 330, chess.KNIGHT: 320, chess.PAWN: 100}
 # https://www.chessprogramming.org/Simplified_Evaluation_Function
 
+
 def evaluate_piece_positions(board, colour):
+
 	score = 0
 	for piece_type in [chess.PAWN, chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN]:
 		for square in board.pieces(piece_type, colour):
@@ -88,12 +90,15 @@ def evaluate_piece_positions(board, colour):
 	return score
 
 def evaluate_material(board, colour):
+
 	material = 0
 	for piece_type in range(chess.PAWN, chess.KING + 1):
 		material += piece_values[piece_type] * (len(board.pieces(piece_type, colour)) - len(board.pieces(piece_type, not colour)))
 	return material
 
+
 def evaluate_board(board, colour):
+
 	material = evaluate_material(board, colour)
 	piece_positions = evaluate_piece_positions(board, colour)
 	# add other evaluations here, examples:
@@ -104,28 +109,31 @@ def evaluate_board(board, colour):
 	# modified endgame evaluations
 	return material + piece_positions
 
+
 # http://web.cs.ucla.edu/~rosen/161/notes/alphabeta.html
 def find_best_move_AB(board, colour, depth, alpha = -math.inf, beta = math.inf, max_player = True):
-	# base case
-	if(depth == 0):
+
+	# Base case
+	if depth == 0:
 		return [evaluate_board(board, colour), None]
 
 	best_move = None
 	moves = list(board.legal_moves)
-	random.shuffle(moves) # so engine doesn't play the same moves
-	# gives_check(move: Move) Probes if the given move would put the opponent in check. The move must be at least pseudo-legal.
-	moves.sort(key=lambda move: board.is_capture(move), reverse=True) # pruning is more effective if capture moves are looked at first
+	random.shuffle(moves) # So engine doesn't play the same moves
+
+	# Gives_check(move: Move) Probes if the given move would put the opponent in check. The move must be at least pseudo-legal.
+	moves.sort(key=lambda move: board.is_capture(move), reverse=True) # Pruning is more effective if capture moves are looked at first
 
 
 	if len(moves) > 0:
 		best_move = moves[0] # board.push(None) causes error
 
-	# maximizing player seeks high value boards and vise versa
+	# Maximizing player seeks high value boards and vice versa
 	best_move_value = -math.inf if max_player else math.inf
 
 	for move in moves:
-		board.push(move)
 
+		board.push(move)
 		move_value = find_best_move_AB(board, colour, depth-1, alpha, beta, not max_player)[0]
 
 		if max_player:
@@ -133,6 +141,7 @@ def find_best_move_AB(board, colour, depth, alpha = -math.inf, beta = math.inf, 
 				best_move = move
 				best_move_value = move_value 
 			alpha = max(move_value, alpha)
+
 		else:
 			if move_value < best_move_value:
 				best_move = move
@@ -146,7 +155,9 @@ def find_best_move_AB(board, colour, depth, alpha = -math.inf, beta = math.inf, 
 
 	return [best_move_value, best_move]
 
+
 def play_chess():
+
 	board = chess.Board()
 	#stockfish = chess.engine.SimpleEngine.popen_uci("/Users/julianrocha/code/stockfish-11-mac/src/stockfish")
 	stockfish = chess.engine.SimpleEngine.popen_uci("C:/Users/Ryan Russell/Programming/stockfish-11-win/Windows/stockfish_20011801_x64")
@@ -168,7 +179,7 @@ def play_chess():
 
 		board.push(move)
 
-		# stockfish turn as black
+		# Stockfish's turn as black
 		print(board)
 		result = stockfish.play(board, chess.engine.Limit(time=0.1))
 		if result.move is None:
@@ -209,6 +220,7 @@ def play_chess():
 	print(board)
 
 play_chess()
+
 
 """
 # outdated (no alpha beta pruning), keeping to show the speedup when a/b is used
