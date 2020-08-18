@@ -19,6 +19,7 @@ template_square_table = {
 """
 
 # Corresponds to values for white pieces, mirror square vertically for black value
+# https://www.chessprogramming.org/Simplified_Evaluation_Function
 piece_square_table = {
 	chess.PAWN: {
 		chess.A8: 0, chess.B8: 0, chess.C8: 0, chess.D8: 0, chess.E8: 0, chess.F8: 0, chess.G8: 0, chess.H8: 0,
@@ -69,6 +70,28 @@ piece_square_table = {
 		chess.A3: -10, chess.B3: 5, chess.C3: 5, chess.D3: 5, chess.E3: 5, chess.F3: 5, chess.G3: 0, chess.H3: -10,
 		chess.A2: -10, chess.B2: 0, chess.C2: 5, chess.D2: 0, chess.E2: 0, chess.F2: 0, chess.G2: 0, chess.H2: -10,
 		chess.A1: -20, chess.B1: -10, chess.C1: -10, chess.D1: -5, chess.E1: -5, chess.F1: -10, chess.G1: -10, chess.H1: -20
+	},
+	chess.KING: {
+		False: { # piece-square table for middle game
+			chess.A8: -30, chess.B8: -40, chess.C8: -40, chess.D8: -50, chess.E8: -50, chess.F8: -40, chess.G8: -40, chess.H8: -30,
+			chess.A7: -30, chess.B7: -40, chess.C7: -40, chess.D7: -50, chess.E7: -50, chess.F7: -40, chess.G7: -40, chess.H7: -30,
+			chess.A6: -30, chess.B6: -40, chess.C6: -40, chess.D6: -50, chess.E6: -50, chess.F6: -40, chess.G6: -40, chess.H6: -30,
+			chess.A5: -30, chess.B5: -40, chess.C5: -40, chess.D5: -50, chess.E5: -50, chess.F5: -40, chess.G5: -40, chess.H5: -30,
+			chess.A4: -20, chess.B4: -30, chess.C4: -30, chess.D4: -40, chess.E4: -40, chess.F4: -30, chess.G4: -30, chess.H4: -20,
+			chess.A3: -10, chess.B3: -20, chess.C3: -20, chess.D3: -20, chess.E3: -20, chess.F3: -20, chess.G3: -20, chess.H3: -10,
+			chess.A2: 20, chess.B2: 20, chess.C2: 0, chess.D2: 0, chess.E2: 0, chess.F2: 0, chess.G2: 20, chess.H2: 20,
+			chess.A1: 20, chess.B1: 30, chess.C1: 10, chess.D1: 0, chess.E1: 0, chess.F1: 10, chess.G1: 30, chess.H1: 20
+		},
+		True: { # piece-square table for end game
+			chess.A8: -50, chess.B8: -40, chess.C8: -30, chess.D8: -20, chess.E8: -20, chess.F8: -30, chess.G8: -40, chess.H8: -50,
+			chess.A7: -30, chess.B7: -20, chess.C7: -10, chess.D7: 0, chess.E7: 0, chess.F7: -10, chess.G7: -20, chess.H7: -30,
+			chess.A6: -30, chess.B6: -10, chess.C6: 20, chess.D6: 30, chess.E6: 30, chess.F6: 20, chess.G6: -10, chess.H6: -30,
+			chess.A5: -30, chess.B5: -10, chess.C5: 30, chess.D5: 40, chess.E5: 40, chess.F5: 30, chess.G5: -10, chess.H5: -30,
+			chess.A4: -30, chess.B4: -10, chess.C4: 30, chess.D4: 40, chess.E4: 40, chess.F4: 30, chess.G4: -10, chess.H4: -30,
+			chess.A3: -30, chess.B3: -10, chess.C3: 20, chess.D3: 30, chess.E3: 30, chess.F3: 20, chess.G3: -10, chess.H3: -30,
+			chess.A2: -30, chess.B2: -30, chess.C2: 0, chess.D2: 0, chess.E2: 0, chess.F2: 0, chess.G2: -30, chess.H2: -30,
+			chess.A1: -50, chess.B1: -30, chess.C1: -30, chess.D1: -30, chess.E1: -30, chess.F1: -30, chess.G1: -30, chess.H1: -50
+		}
 	}
 }
 
@@ -76,18 +99,32 @@ piece_values = {chess.KING : 20000, chess.QUEEN: 900, chess.ROOK: 500, chess.BIS
 # https://www.chessprogramming.org/Simplified_Evaluation_Function
 
 
+def is_endgame(board):
+	if bool(board.pieces(chess.QUEEN, chess.WHITE)):
+		if len(board.pieces(chess.KNIGHT, chess.WHITE)) + len(board.pieces(chess.BISHOP, chess.WHITE)) + len(board.pieces(chess.ROOK, chess.WHITE)) > 1:
+			return False # white has queen and more than 1 minor piece
+	elif bool(board.pieces(chess.QUEEN, chess.BLACK)):
+		if len(board.pieces(chess.KNIGHT, chess.BLACK)) + len(board.pieces(chess.BISHOP, chess.BLACK)) + len(board.pieces(chess.ROOK, chess.BLACK)) > 1:
+			return False # black has queen and more than 1 minor piece
+	return True # no queens on board, or queens on board but 1 minor piece each maxium
+
+
 def evaluate_piece_positions(board, colour):
 
 	score = 0
-	for piece_type in [chess.PAWN, chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN]:
+	for piece_type in range(chess.PAWN, chess.QUEEN + 1):
 		for square in board.pieces(piece_type, colour):
-			x = piece_square_table[piece_type][square] if colour == chess.WHITE else piece_square_table[piece_type][chess.square_mirror(square)]
-			score += x
-
+			score += piece_square_table[piece_type][square] if colour == chess.WHITE else piece_square_table[piece_type][chess.square_mirror(square)]
 		for square in board.pieces(piece_type, not colour):
-			x = piece_square_table[piece_type][square] if colour == chess.BLACK else piece_square_table[piece_type][chess.square_mirror(square)]
-			score -= x
+			score -= piece_square_table[piece_type][square] if colour == chess.BLACK else piece_square_table[piece_type][chess.square_mirror(square)]
+	
+	endgame = is_endgame(board)
+	for square in board.pieces(chess.KING, colour):
+		score += piece_square_table[chess.KING][endgame][square] if colour == chess.WHITE else piece_square_table[chess.KING][endgame][chess.square_mirror(square)]
+	for square in board.pieces(chess.KING, not colour):
+		score -= piece_square_table[chess.KING][endgame][square] if colour == chess.BLACK else piece_square_table[chess.KING][endgame][chess.square_mirror(square)]
 	return score
+
 
 def evaluate_material(board, colour):
 
@@ -123,7 +160,6 @@ def find_best_move_AB(board, colour, depth, alpha = -math.inf, beta = math.inf, 
 
 	# Gives_check(move: Move) Probes if the given move would put the opponent in check. The move must be at least pseudo-legal.
 	moves.sort(key=lambda move: board.is_capture(move), reverse=True) # Pruning is more effective if capture moves are looked at first
-
 
 	if len(moves) > 0:
 		best_move = moves[0] # board.push(None) causes error
