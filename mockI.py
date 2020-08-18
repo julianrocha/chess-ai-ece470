@@ -138,7 +138,7 @@ def evaluate_board(board, colour):
 	# compare 'mobility' of both sides_
 	# add for bishop pair
 	# opening book
-	# modofied endgame evaluations
+	# modified endgame evaluations
 	return material + piece_positions
 
 # http://web.cs.ucla.edu/~rosen/161/notes/alphabeta.html
@@ -184,11 +184,14 @@ def find_best_move_AB(board, colour, depth, alpha = -math.inf, beta = math.inf, 
 
 def play_chess():
 	board = chess.Board()
-	stockfish = chess.engine.SimpleEngine.popen_uci("/Users/julianrocha/code/stockfish-11-mac/src/stockfish")
+	#stockfish = chess.engine.SimpleEngine.popen_uci("/Users/julianrocha/code/stockfish-11-mac/src/stockfish")
+	stockfish = chess.engine.SimpleEngine.popen_uci("C:/Users/Ryan Russell/Programming/stockfish-11-win/Windows/stockfish_20011801_x64")
+
 	stockfish.configure({"Skill Level" : 1})
 
 	print("Starting chess game...",end="\n")
 	while not board.is_game_over():
+		
 		print(board)
 		if board.turn:
 			print("Best move for white is: ",end="")
@@ -211,21 +214,34 @@ def play_chess():
 		board.push(result.move)
 
 	stockfish.quit()
-	print("Result for White-Black is: " + board.result())
+	
 	if board.is_checkmate():
-		print("checkmate!")
+		print("Checkmate!")
 	if board.is_stalemate():
-		print("stalemate!")
+		print("Stalemate!")
 	if board.is_insufficient_material():
-		print("insufficient material!")
+		print("Insufficient material!")
 	if board.has_insufficient_material(chess.WHITE):
-		print("white has insufficient material!")
+		print("White has insufficient material!")
 	if board.has_insufficient_material(chess.BLACK):
-		print("black has insufficient material!")
+		print("Black has insufficient material!")
 	if board.is_seventyfive_moves():
 		print("75 moves played without capture/pawn move")
 	if board.is_fivefold_repetition():
-		print("position occured for 5th time")
+		print("Position occurred for 5th time")
+
+	print("Result for White-Black is: " + board.result())
+
+	if board.result() == "0-1":
+		print("Stockfish wins.")
+	elif board.result() == "1-0":
+		print("AI wins.")
+	elif board.result() == "1/2-1/2":
+		print("The match results in a draw.")
+	else:
+		print("Result is undetermined.")
+
+	print()
 	print(board)
 
 play_chess()
