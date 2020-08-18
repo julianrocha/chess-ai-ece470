@@ -146,12 +146,9 @@ def play_chess(stockfish, colour = '1', manual_play = False):
 			print(result.move)
 			board.push(result.move)
 		elif colour != '1':
-
 			result = handle_manual_input(board)
-
 			if result is None:
 				break
-
 			board.push(result)
 
 	if board.is_checkmate():
