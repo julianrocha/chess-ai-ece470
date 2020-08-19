@@ -1,4 +1,3 @@
-# Packages
 import chess
 import chess.svg
 import chess.engine
@@ -6,11 +5,9 @@ import time
 import math
 import random
 import re
+import matplotlib.pyplot as plt
 
-# Files
 import values
-
-# https://www.chessprogramming.org/Simplified_Evaluation_Function
 
 
 def is_endgame(board):
@@ -23,6 +20,7 @@ def is_endgame(board):
 	return True # no queens on board, or queens on board but 1 minor piece each maxium
 
 
+# https://www.chessprogramming.org/Simplified_Evaluation_Function
 def evaluate_piece_positions(board, colour):
 
 	score = 0
@@ -125,6 +123,7 @@ def play_chess(stockfish, colour = '1', manual_play = False):
 			print("Best move for white is: ",end="")
 		else:
 			print("Best move for black is: ",end="")
+
 		value, move = find_best_move_AB(board, board.turn, 4)
 		print(move)
 		print(value)
@@ -136,15 +135,16 @@ def play_chess(stockfish, colour = '1', manual_play = False):
 
 		if manual_play == False:
 			# Stockfish's turn as black
-
 			result = stockfish.play(board, chess.engine.Limit(time=0.1))
 
 			if result.move is None:
 				break
+
 			print("Stockfish will reply with: " + str(result.move))
 			print()
 			print(result.move)
 			board.push(result.move)
+
 		elif colour != '1':
 			result = handle_manual_input(board)
 			if result is None:
@@ -200,17 +200,55 @@ def handle_manual_input(board):
 	return result
 
 
+def win_plot(ai_win_rate, stockfish_win_rate, num_games, max_skill):
+
+	plt.title("AI and Stockfish Win Rate")
+	plt.xlabel("Stockfish Skill Level")
+	plt.ylabel("Win Rate")
+
+	plt.xlim((1, max_skill))
+
+	plt.plot(ai_win_rate, 'r', label = "AI Win Rate")
+	plt.plot(stockfish_win_rate, 'b', label = "Stockfish Win Rate")
+
+	plt.legend()
+
+	filename = "chess_win_rate.png"
+	plt.savefig(filename)
+	plt.clf()
+
+
+def time_plot(avg_durations, num_games, max_skill):
+
+	plt.title("Average Game Duration vs. Skill Level")
+	plt.xlabel("Stockfish Skill Level")
+	plt.ylabel("Average Game Duration")
+
+	plt.xlim((1, max_skill))
+
+	plt.plot(avg_durations, 'g', label = "Average Game Duration")
+
+	filename = "chess_game_durations.png"
+	plt.savefig(filename)
+	plt.clf()
+
+
 def main():
 
-	usr_choice = input("Enter 1 to play manually, 0 for stockfish: ")
+	usr_choice = input("Enter 0 to play manually, 1 for stockfish, or 2 to produce metrics: ")
 
-	if usr_choice != '0' and usr_choice != '1':
+	if usr_choice != '0' and usr_choice != '1' and usr_choice != '2':
+
 		print('Please enter a valid input')
 		main()
-	elif usr_choice == '1':
+
+	elif usr_choice == '0':
+
 		colour = input("1 for white, 0 for black: ")
 		play_chess(None, colour, True)
-	else:
+
+	elif usr_choice == '1':
+
 		#stockfish = chess.engine.SimpleEngine.popen_uci("/Users/julianrocha/code/stockfish-11-mac/src/stockfish")
 		#stockfish = chess.engine.SimpleEngine.popen_uci("C:/Users/Ryan Russell/Programming/stockfish-11-win/Windows/stockfish_20011801_x64")
 		stockfish = chess.engine.SimpleEngine.popen_uci(r"C:\Users\conor\Documents\Summer 2020\ECE 470\stockfish-11-win\Windows\stockfish_20011801_x64_modern.exe")
@@ -220,9 +258,65 @@ def main():
 		results = []
 		for i in range(0, 1):
 			results.append(play_chess(stockfish))
-		print(results)
 
+		print(results)
 		stockfish.quit()
+
+	else:
+
+		ai_win_rate = []
+		ai_win_rate.append(0)
+		stockfish_win_rate = []
+		stockfish_win_rate.append(0)
+		avg_durations = []
+		avg_durations.append(0)
+		max_skill = 5
+
+		for skill in range(1, max_skill+1):
+
+			#stockfish = chess.engine.SimpleEngine.popen_uci("/Users/julianrocha/code/stockfish-11-mac/src/stockfish")
+			stockfish = chess.engine.SimpleEngine.popen_uci("C:/Users/Ryan Russell/Programming/stockfish-11-win/Windows/stockfish_20011801_x64")
+			#stockfish = chess.engine.SimpleEngine.popen_uci(r"C:\Users\conor\Documents\Summer 2020\ECE 470\stockfish-11-win\Windows\stockfish_20011801_x64_modern.exe")
+
+			stockfish.configure({"Threads" : 8, "Skill Level" : skill})
+
+			print("Stockfish skill level set to " + str(skill))
+
+			results = []
+			ai_wins = 0
+			stockfish_wins = 0
+			total_time = 0
+			num_games = 10
+
+			for i in range(0, num_games):
+
+				start = time.time()
+				results.append(play_chess(stockfish))
+				end = time.time()
+
+				time_elapsed = end - start
+				total_time += time_elapsed
+
+				if results[i] == "0-1":
+					stockfish_wins += 1
+				elif results[i] == "1-0":
+					ai_wins += 1
+
+			cur_ai_rate = ai_wins / num_games
+			cur_stockfish_rate = stockfish_wins / num_games
+			avg_time = total_time / num_games
+
+			ai_win_rate.append(cur_ai_rate)
+			stockfish_win_rate.append(cur_stockfish_rate)
+			avg_durations.append(avg_time)
+
+			stockfish.quit()
+
+		print(ai_win_rate)
+		print(stockfish_win_rate)
+		win_plot(ai_win_rate, stockfish_win_rate, num_games, max_skill)
+		time_plot(avg_durations, num_games, max_skill)
+
 
 main()
 
