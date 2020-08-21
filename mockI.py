@@ -10,14 +10,12 @@ import matplotlib.pyplot as plt
 import values
 
 
-def is_endgame(board):
-	if bool(board.pieces(chess.QUEEN, chess.WHITE)):
-		if len(board.pieces(chess.KNIGHT, chess.WHITE)) + len(board.pieces(chess.BISHOP, chess.WHITE)) + len(board.pieces(chess.ROOK, chess.WHITE)) > 1:
-			return False # white has queen and more than 1 minor piece
-	elif bool(board.pieces(chess.QUEEN, chess.BLACK)):
-		if len(board.pieces(chess.KNIGHT, chess.BLACK)) + len(board.pieces(chess.BISHOP, chess.BLACK)) + len(board.pieces(chess.ROOK, chess.BLACK)) > 1:
-			return False # black has queen and more than 1 minor piece
-	return True # no queens on board, or queens on board but 1 minor piece each maxium
+def is_endgame(board):	
+	if len(board.pieces(chess.QUEEN, chess.WHITE))+ len(board.pieces(chess.KNIGHT, chess.WHITE)) + len(board.pieces(chess.BISHOP, chess.WHITE)) + len(board.pieces(chess.ROOK, chess.WHITE)) > 1:
+			return False # white has more than 2 minor piece
+	if len(board.pieces(chess.QUEEN, chess.BLACK)) + len(board.pieces(chess.KNIGHT, chess.BLACK)) + len(board.pieces(chess.BISHOP, chess.BLACK)) + len(board.pieces(chess.ROOK, chess.BLACK)) > 1:
+			return False # black has  more than 2 minor piece
+	return True
 
 
 # https://www.chessprogramming.org/Simplified_Evaluation_Function
@@ -37,6 +35,15 @@ def evaluate_piece_positions(board, colour):
 		score -= values.piece_square_table[chess.KING][endgame][square] if colour == chess.BLACK else values.piece_square_table[chess.KING][endgame][chess.square_mirror(square)]
 	return score
 
+def evaluate_checkmate(board, colour):
+	if board.is_checkmate():
+		return -math.inf if board.turn == colour else math.inf
+	return 0
+
+def evaluate_stalemate(board, material):
+	if board.is_stalemate():
+		return math.inf if material < 0 else -math.inf
+	return 0
 
 def evaluate_material(board, colour):
 
@@ -45,18 +52,29 @@ def evaluate_material(board, colour):
 		material += values.piece_values[piece_type] * (len(board.pieces(piece_type, colour)) - len(board.pieces(piece_type, not colour)))
 	return material
 
+def evaluate_check(board, colour):
+	if board.is_check():
+		return -100 if board.turn == colour else 100
+	return 0
+
 
 def evaluate_board(board, colour):
 
 	material = evaluate_material(board, colour)
 	piece_positions = evaluate_piece_positions(board, colour)
+	checkmate = evaluate_checkmate(board, colour)
+	stalemate = evaluate_stalemate(board, material)
+	check = evaluate_check(board, colour)
 	# add other evaluations here, examples:
+	# rooks on open files (no pawn), semi open (1 pawn)
+	# connected rooks
+	# pinning pieces, skewer
 	# deduct for having blocked, doubled, or isolated pawns
 	# compare 'mobility' of both sides_
 	# add for bishop pair
 	# opening book
 	# modified endgame evaluations
-	return material + piece_positions
+	return 10 * material + piece_positions + checkmate + stalemate + check
 
 
 # http://web.cs.ucla.edu/~rosen/161/notes/alphabeta.html
@@ -66,18 +84,14 @@ def find_best_move_AB(board, colour, depth, alpha = -math.inf, beta = math.inf, 
 	if depth == 0:
 		return [evaluate_board(board, colour), None]
 
-	best_move = None
 	moves = list(board.legal_moves)
+	if len(moves) == 0:
+		return [evaluate_board(board, colour), None] # stop descending tree if branch has no legal moves
+
 	random.shuffle(moves) # So engine doesn't play the same moves
-
-	# Gives_check(move: Move) Probes if the given move would put the opponent in check. The move must be at least pseudo-legal.
 	moves.sort(key=lambda move: board.is_capture(move), reverse=True) # Pruning is more effective if capture moves are looked at first
-
-	if len(moves) > 0:
-		best_move = moves[0] # board.push(None) causes error
-
-	# Maximizing player seeks high value boards and vice versa
-	best_move_value = -math.inf if max_player else math.inf
+	best_move = moves[0] # board.push(None) causes error
+	best_move_value = -math.inf if max_player else math.inf # Maximizing player seeks high value boards and vice versa
 
 	for move in moves:
 
@@ -110,7 +124,6 @@ def play_chess(stockfish, colour = '1', manual_play = False):
 
 	print("Starting chess game...",end="\n")
 	while not board.is_game_over():
-
 		print(board)
 
 		if manual_play and colour == '1':
@@ -127,7 +140,9 @@ def play_chess(stockfish, colour = '1', manual_play = False):
 		value, move = find_best_move_AB(board, board.turn, 4)
 		print(move)
 		print(value)
+		print("AI evaluates current board as: " + str(evaluate_board(board, board.turn)))
 		print()
+
 
 		board.push(move)
 		print(board)
@@ -249,11 +264,11 @@ def main():
 
 	elif usr_choice == '1':
 
-		#stockfish = chess.engine.SimpleEngine.popen_uci("/Users/julianrocha/code/stockfish-11-mac/src/stockfish")
+		stockfish = chess.engine.SimpleEngine.popen_uci("/Users/julianrocha/code/stockfish-11-mac/src/stockfish")
 		#stockfish = chess.engine.SimpleEngine.popen_uci("C:/Users/Ryan Russell/Programming/stockfish-11-win/Windows/stockfish_20011801_x64")
-		stockfish = chess.engine.SimpleEngine.popen_uci(r"C:\Users\conor\Documents\Summer 2020\ECE 470\stockfish-11-win\Windows\stockfish_20011801_x64_modern.exe")
+		#stockfish = chess.engine.SimpleEngine.popen_uci(r"C:\Users\conor\Documents\Summer 2020\ECE 470\stockfish-11-win\Windows\stockfish_20011801_x64_modern.exe")
 
-		stockfish.configure({"Threads" : 8, "Skill Level" : 1})
+		stockfish.configure({"Threads" : 8, "Skill Level" : 3})
 
 		results = []
 		for i in range(0, 1):
@@ -274,8 +289,8 @@ def main():
 
 		for skill in range(1, max_skill+1):
 
-			#stockfish = chess.engine.SimpleEngine.popen_uci("/Users/julianrocha/code/stockfish-11-mac/src/stockfish")
-			stockfish = chess.engine.SimpleEngine.popen_uci("C:/Users/Ryan Russell/Programming/stockfish-11-win/Windows/stockfish_20011801_x64")
+			stockfish = chess.engine.SimpleEngine.popen_uci("/Users/julianrocha/code/stockfish-11-mac/src/stockfish")
+			#stockfish = chess.engine.SimpleEngine.popen_uci("C:/Users/Ryan Russell/Programming/stockfish-11-win/Windows/stockfish_20011801_x64")
 			#stockfish = chess.engine.SimpleEngine.popen_uci(r"C:\Users\conor\Documents\Summer 2020\ECE 470\stockfish-11-win\Windows\stockfish_20011801_x64_modern.exe")
 
 			stockfish.configure({"Threads" : 8, "Skill Level" : skill})
@@ -319,6 +334,7 @@ def main():
 
 
 main()
+
 
 
 """
